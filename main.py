@@ -3,14 +3,41 @@ from tkinter import messagebox
 import pyperclip
 import random
 import json
+from cryptography.fernet import Fernet
+import os
 
 
+#-------------------------------constants--------------------------------------------------------
 
 PINK = "#e2979c"
 RED = "#e7305b"
 GREEN = "#228B22"
 YELLOW = "#f7f5dd"
 FONT_NAME = "Courier"
+
+#----------------------------------------------encryption----------------------------------------
+
+
+KEY_FILE = "key.key"
+
+def generate_key():
+    key = Fernet.generate_key()
+    with open(KEY_FILE, "wb") as key_file:
+        key_file.write(key)
+
+def load_key():
+    if not os.path.exists(KEY_FILE):
+        generate_key()
+    with open(KEY_FILE, "rb") as key_file:
+        return key_file.read()
+
+fernet = Fernet(load_key())
+
+def encrypt_password(password):
+    return fernet.encrypt(password.encode()).decode()
+
+def decrypt_password(encrypted_password):
+    return fernet.decrypt(encrypted_password.encode()).decode()
 
 
 #-----------------------------------------------------------search function --------------------------------------#
@@ -19,9 +46,10 @@ FONT_NAME = "Courier"
 def search():
     with open("data file.json","r") as data_file:
         data = json.load(data_file)
+        decrypted = decrypt_password(data[website_entry.get()]["password"])
         try:
             messagebox.showinfo(title=website_entry.get(),message=f"your email is : {data[website_entry.get()]['email']}\n "
-                  f"your password is : {data[website_entry.get()]['password']}")
+                  f"your password is : {decrypted}")
         except KeyError:
             messagebox.showinfo(title=website_entry.get(),message="you don't have an email and password for this website")
 
@@ -50,7 +78,7 @@ def add():
     new_data = {
         website_entry.get(): {
             "email": email_entry.get(),
-            "password": password_entry.get(),
+            "password": encrypt_password(password_entry.get()),
         }
     }
     if len(website_entry.get()) == 0 or len(password_entry.get()) == 0:
@@ -85,10 +113,10 @@ window.minsize(height=400,width=450)
 
 #labels and buttons
 
-text1 = Label(text="Website",anchor='w')
+text1 = Label(text="Website", bg=YELLOW,anchor='w')
 text1.grid(row = 1,column = 0)
 
-text2 = Label(text="Email / Username",anchor='w')
+text2 = Label(text="Email / Username", bg=YELLOW,anchor='w')
 text2.grid(row = 2,column = 0)
 
 text3 = Label(text="Password", bg=YELLOW, highlightthickness=0,anchor='w')
